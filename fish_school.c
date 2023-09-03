@@ -8,7 +8,7 @@ static float start_w = 10.0; // starting weight of fish, also half of the max we
 static float move_speed = 0.1;
 static int max_steps = 10; // how many iterations of swimming to simulate
 
-void main()
+int main(int argc, char *argv[])
 {
 	float max_delta;
 	float bary_numer; // technically should have x and y for barycentre
