@@ -2,6 +2,8 @@
 #include<stdlib.h>
 #include<math.h>
 #include<stdio.h>
+#include<time.h>
+#include<omp.h>
 
 static int school = 5; // number of fish to generate
 static float start_w = 10.0; // starting weight of fish, also half of the max weight
@@ -23,6 +25,7 @@ int main(int argc, char *argv[])
 		float euc_dist;
 		float delta_f;
 	};
+	srand(time(NULL));
 	
 	// generate fish
 	struct fish *fishes;
@@ -33,6 +36,9 @@ int main(int argc, char *argv[])
 		(fishes + i) -> y = 50*(float)rand()/(float)(RAND_MAX);
 		(fishes + i) -> w=start_w;
 	}
+
+	// start the clock
+	clock_t begin = clock();
 
 	for(int j = 1; j<=max_steps; j = j +1){
 		// fish swimming
@@ -65,5 +71,9 @@ int main(int argc, char *argv[])
 		}
 		printf("barycentre =%f\n", bary_numer/bary_denom);
 	}
+
+	// stop the clock
+	clock_t end = clock();
+	printf("Elapsed: %10.6f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);
 }
 
