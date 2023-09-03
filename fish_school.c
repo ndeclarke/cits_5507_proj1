@@ -4,6 +4,7 @@
 static int school = 5; // number of fish to generate
 static float start_w = 10.0; // starting weight of fish, also half of the max weight
 static float move_speed = 0.1;
+static int max_steps = 10; // how many iterations of swimming to simulate
 
 void main()
 {
@@ -25,8 +26,6 @@ void main()
 		(fishes + i) -> x = 50*(float)rand()/(float)(RAND_MAX);
 		(fishes + i) -> y = 50*(float)rand()/(float)(RAND_MAX);
 		(fishes + i) -> w=start_w;
-		(fishes + i) -> move_x = 0; // probably unnecessary, maybe delete
-		(fishes + i) -> move_y = 0;
 	}
 
 	for(j = 1; j<=max_steps; j = j +1){
