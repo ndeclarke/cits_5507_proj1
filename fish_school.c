@@ -1,5 +1,7 @@
 #include<ctype.h>
 #include<stdlib.h>
+#include<math.h>
+#include<stdio.h>
 
 static int school = 5; // number of fish to generate
 static float start_w = 10.0; // starting weight of fish, also half of the max weight
@@ -24,40 +26,40 @@ void main()
 	
 	// generate fish
 	struct fish *fishes;
-	fishes = (struc fish*)malloc(school*sizeof(struc fish));
+	fishes = (struct fish*)malloc(school*sizeof(struct fish));
 
-	for(i = 0; i<school; i = i +1){
+	for(int i = 0; i<school; i = i +1){
 		(fishes + i) -> x = 50*(float)rand()/(float)(RAND_MAX);
 		(fishes + i) -> y = 50*(float)rand()/(float)(RAND_MAX);
 		(fishes + i) -> w=start_w;
 	}
 
-	for(j = 1; j<=max_steps; j = j +1){
+	for(int j = 1; j<=max_steps; j = j +1){
 		// fish swimming
-		for(i = 0; i<school; i = i +1){
+		for(int i = 0; i<school; i = i +1){
 			(fishes + i) -> move_x = ((float)rand()/(float)(RAND_MAX)-0.5)*move_speed;
 			(fishes + i) -> move_y = ((float)rand()/(float)(RAND_MAX)-0.5)*move_speed;
 			(fishes + i) -> x = (fishes + i) -> x + (fishes + i) -> move_x;
 			(fishes + i) -> y = (fishes + i) -> y + (fishes + i) -> move_y;
-			(fishes + i) -> delta_f = sqrt((fishes + i) -> x**2 + (fishes + i) -> move_y**2) - (fishes + i) -> euc_dist;
-			(fishes + i) -> euc_dist = sqrt((fishes + i) -> x**2 + (fishes + i) -> move_y**2);
+			(fishes + i) -> delta_f = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> move_y,2)) - (fishes + i) -> euc_dist;
+			(fishes + i) -> euc_dist = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> move_y,2));
 		}
 
 		// find maximum change to objective function
-		max_delta = -0.2 // minimum possible is 0.1*sqrt(2)
-		for(i = 0; i<school; i = i +1){
+		max_delta = -0.2; // minimum possible is 0.1*sqrt(2)
+		for(int i = 0; i<school; i = i +1){
 			if((fishes + i) -> delta_f > max_delta){max_delta = (fishes + i) -> delta_f;}
 		}
 
 		//change weights
-		for(i = 0; i<school; i = i +1){
-			(fishes + i) -> w = w + (fishes + i) -> delta_f/max_delta;
+		for(int i = 0; i<school; i = i +1){
+			(fishes + i) -> w = (fishes + i) -> w + (fishes + i) -> delta_f/max_delta;
 		}
 
 		// calculate barycentre
 		bary_numer = 0;
 		bary_denom = 0;
-		for(i = 0; i<school; i = i +1){
+		for(int i = 0; i<school; i = i +1){
 			bary_numer = bary_numer + (fishes + i) -> euc_dist * (fishes + i) -> w;
 			bary_denom = bary_denom + (fishes + i) -> euc_dist;
 		}
