@@ -5,10 +5,11 @@
 #include<time.h>
 #include<omp.h>
 
-static int school = 5; // number of fish to generate
-static float start_w = 10.0; // starting weight of fish, also half of the max weight
-static float move_speed = 0.1;
-static int max_steps = 10; // how many iterations of swimming to simulate
+#define SCHOOL 5 // number of fish to generate
+#define STEPS 10 // how many iterations to simulate
+#define START_W 10.0 // starting weight of fish
+#define MAX_WEIGHT 20.0 // should be 2 x START_W
+#define MOVE_SPEED 0.1
 
 int main(int argc, char *argv[])
 {
@@ -20,8 +21,6 @@ int main(int argc, char *argv[])
 		float x;
 		float y;
 		float w;
-		float move_x;
-		float move_y;
 		float euc_dist;
 		float delta_f;
 	};
@@ -29,43 +28,51 @@ int main(int argc, char *argv[])
 	
 	// generate fish
 	struct fish *fishes;
-	fishes = (struct fish*)malloc(school*sizeof(struct fish));
+	fishes = (struct fish*)malloc(SCHOOL*sizeof(struct fish));
 
-	for(int i = 0; i<school; i = i +1){
-		(fishes + i) -> x = 50*(float)rand()/(float)(RAND_MAX);
-		(fishes + i) -> y = 50*(float)rand()/(float)(RAND_MAX);
-		(fishes + i) -> w=start_w;
+	for(int i = 0; i<SCHOOL; i = i +1){
+		(fishes + i) -> x = 100*(float)rand()/(float)(RAND_MAX) - 50; // randomly in the centre 100x100 square
+		(fishes + i) -> y = 100*(float)rand()/(float)(RAND_MAX) - 50;
+		(fishes + i) -> w = START_W;
+		(fishes + i) -> euc_dist = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2));
 	}
 
 	// start the clock
 	clock_t begin = clock();
 
-	for(int j = 1; j<=max_steps; j = j +1){
+	// Simulation
+	for(int j = 1; j<=STEPS; j = j +1){
 		// fish swimming
-		for(int i = 0; i<school; i = i +1){
-			(fishes + i) -> move_x = ((float)rand()/(float)(RAND_MAX)-0.5)*move_speed;
-			(fishes + i) -> move_y = ((float)rand()/(float)(RAND_MAX)-0.5)*move_speed;
-			(fishes + i) -> x = (fishes + i) -> x + (fishes + i) -> move_x;
-			(fishes + i) -> y = (fishes + i) -> y + (fishes + i) -> move_y;
-			(fishes + i) -> delta_f = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> move_y,2)) - (fishes + i) -> euc_dist;
-			(fishes + i) -> euc_dist = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> move_y,2));
+		for(int i = 0; i<SCHOOL; i = i +1){
+			// move random values in interval [-MOVE_SPEED, MOVE_SPEED]
+			(fishes + i) -> x = (fishes + i) -> x + (2*(float)rand()/(float)(RAND_MAX) - 1)*MOVE_SPEED;
+			(fishes + i) -> y = (fishes + i) -> y + (2*(float)rand()/(float)(RAND_MAX) - 1)*MOVE_SPEED;
+			// use new x and y to calculate change in objective function
+			(fishes + i) -> delta_f = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2)) - (fishes + i) -> euc_dist;
+			// now calculate new value for objective function
+			(fishes + i) -> euc_dist = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2));
 		}
 
 		// find maximum change to objective function
-		max_delta = -0.2; // minimum possible is 0.1*sqrt(2)
-		for(int i = 0; i<school; i = i +1){
-			if((fishes + i) -> delta_f > max_delta){max_delta = (fishes + i) -> delta_f;}
+		max_delta = -0.2; // minimum possible is -0.1*sqrt(2)
+		for(int i = 0; i<SCHOOL; i = i +1){
+			if((fishes + i) -> delta_f > max_delta){
+				max_delta = (fishes + i) -> delta_f;
+			}
 		}
 
 		//change weights
-		for(int i = 0; i<school; i = i +1){
+		for(int i = 0; i<SCHOOL; i = i +1){
 			(fishes + i) -> w = (fishes + i) -> w + (fishes + i) -> delta_f/max_delta;
+			if((fishes + i) -> w > MAX_WEIGHT){
+				(fishes + i) -> w = MAX_WEIGHT;
+			}
 		}
 
 		// calculate barycentre
 		bary_numer = 0;
 		bary_denom = 0;
-		for(int i = 0; i<school; i = i +1){
+		for(int i = 0; i<SCHOOL; i = i +1){
 			bary_numer = bary_numer + (fishes + i) -> euc_dist * (fishes + i) -> w;
 			bary_denom = bary_denom + (fishes + i) -> euc_dist;
 		}
