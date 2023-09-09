@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
 			(fishes + i) -> delta_f = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2)) - (fishes + i) -> euc_dist;
 			// now calculate new value for objective function
 			(fishes + i) -> euc_dist = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2));
-			printf("fish %u x = %f y = %f delta_f = %f\n", i, (fishes + i) -> x, (fishes + i) -> y, (fishes + i) -> delta_f);
 		}
 			
 		// find maximum change to objective function
@@ -76,8 +75,6 @@ int main(int argc, char *argv[])
 				max_delta = (fishes + i) -> delta_f;
 			}
 		}
-
-		printf("max delta_f %f\n", max_delta);
 
 		//change weights
 		#pragma omp parallel for
