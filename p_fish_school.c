@@ -10,6 +10,8 @@
 #define START_W 10.0 // starting weight of fish
 #define MAX_WEIGHT 20.0 // should be 2 x START_W
 #define MOVE_SPEED 0.1
+#define NUM_THREADS 4
+#define SCHED static
 
 int main(int argc, char *argv[])
 {
@@ -25,11 +27,12 @@ int main(int argc, char *argv[])
 		float delta_f;
 	};
 	srand(time(NULL));
+	omp_set_num_threads(NUM_THREADS);
 	
 	// generate fish
 	struct fish *fishes;
 	fishes = (struct fish*)malloc(SCHOOL*sizeof(struct fish));
-	#pragma omp parallel for
+	#pragma omp parallel for schedule(SCHED)
 	for(int i = 0; i<SCHOOL; i = i +1){
 		(fishes + i) -> x = 100*(float)rand()/(float)(RAND_MAX) - 50; // randomly in the centre 100x100 square
 		(fishes + i) -> y = 100*(float)rand()/(float)(RAND_MAX) - 50;
@@ -44,7 +47,7 @@ int main(int argc, char *argv[])
 	// Simulation
 	for(int j = 1; j<=STEPS; j = j +1){
 		// fish swimming
-		#pragma omp parallel for
+		#pragma omp parallel for schedule(SCHED)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			// move random values in interval [-MOVE_SPEED, MOVE_SPEED]
 			(fishes + i) -> x = (fishes + i) -> x + (2*(float)rand()/(float)(RAND_MAX) - 1)*MOVE_SPEED;
@@ -69,7 +72,7 @@ int main(int argc, char *argv[])
 			
 		// find maximum change to objective function
 		max_delta = -0.2; // minimum possible is -0.1*sqrt(2)
-		#pragma omp parallel for reduction(max: max_delta)
+		#pragma omp parallel for schedule(SCHED) reduction(max: max_delta)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			if((fishes + i) -> delta_f > max_delta){
 				max_delta = (fishes + i) -> delta_f;
@@ -77,18 +80,21 @@ int main(int argc, char *argv[])
 		}
 
 		//change weights
-		#pragma omp parallel for
+		#pragma omp parallel for schedule(SCHED)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			(fishes + i) -> w = (fishes + i) -> w + (fishes + i) -> delta_f/max_delta;
 			if((fishes + i) -> w > MAX_WEIGHT){
 				(fishes + i) -> w = MAX_WEIGHT;
+			}
+			if((fishes + i) -> w < 0.0){
+				(fishes + i) -> w = 0.0;
 			}
 		}
 
 		// calculate barycentre
 		bary_numer = 0;
 		bary_denom = 0;
-		#pragma omp parallel for reduction(+: bary_numer, bary_denom)
+		#pragma omp parallel for schedule(SCHED) reduction(+: bary_numer, bary_denom)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			bary_numer = bary_numer + (fishes + i) -> euc_dist * (fishes + i) -> w;
 			bary_denom = bary_denom + (fishes + i) -> euc_dist;
