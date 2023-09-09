@@ -47,6 +47,19 @@ int main(int argc, char *argv[])
 			// move random values in interval [-MOVE_SPEED, MOVE_SPEED]
 			(fishes + i) -> x = (fishes + i) -> x + (2*(float)rand()/(float)(RAND_MAX) - 1)*MOVE_SPEED;
 			(fishes + i) -> y = (fishes + i) -> y + (2*(float)rand()/(float)(RAND_MAX) - 1)*MOVE_SPEED;
+			if((fishes + i) -> x > 100.0){
+				(fishes + i) -> x = 100.0;
+			}
+			if((fishes + i) -> x < -100.0){
+				(fishes + i) -> x = -100.0;
+			}
+			if((fishes + i) -> y > 100.0){
+				(fishes + i) -> y = 100.0;
+			}
+			if((fishes + i) -> y < -100.0){
+				(fishes + i) -> y = -100.0;
+			}
+
 			// use new x and y to calculate change in objective function
 			(fishes + i) -> delta_f = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2)) - (fishes + i) -> euc_dist;
 			// now calculate new value for objective function
