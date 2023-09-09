@@ -80,6 +80,9 @@ int main(int argc, char *argv[])
 			if((fishes + i) -> w > MAX_WEIGHT){
 				(fishes + i) -> w = MAX_WEIGHT;
 			}
+			if((fishes + i) -> w < 0.0){
+				(fishes + i) -> w = 0.0;
+			}
 		}
 
 		// calculate barycentre
