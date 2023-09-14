@@ -1,0 +1,12 @@
+Cache:
+https://support.pawsey.org.au/documentation/display/US/Setonix+General+Information
+
+https://en.wikipedia.org/wiki/Zen_3
+L1 cache 64KB
+L2 cache 512KB
+L3 cache 32MB
+
+HighPerfomance constructs to test
+- ordered
+- schedule clause with different strategies and chunk size
+

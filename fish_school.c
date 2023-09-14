@@ -2,7 +2,6 @@
 #include<stdlib.h>
 #include<math.h>
 #include<stdio.h>
-#include<time.h>
 #include<omp.h>
 
 #define SCHOOL 5 // number of fish to generate
@@ -38,7 +37,7 @@ int main(int argc, char *argv[])
 	}
 
 	// start the clock
-	clock_t begin = clock();
+	double begin = omp_get_wtime();
 
 	// Simulation
 	for(int j = 1; j<=STEPS; j = j +1){
@@ -92,11 +91,10 @@ int main(int argc, char *argv[])
 			bary_numer = bary_numer + (fishes + i) -> euc_dist * (fishes + i) -> w;
 			bary_denom = bary_denom + (fishes + i) -> euc_dist;
 		}
-		printf("barycentre =%f\n", bary_numer/bary_denom);
 	}
 
 	// stop the clock
-	clock_t end = clock();
-	printf("Elapsed: %10.6f seconds\n", (double)(end - begin) / CLOCKS_PER_SEC);
+	double end = omp_get_wtime();
+	printf("Elapsed: %10.6f seconds\n", (end - begin));
 }
 
