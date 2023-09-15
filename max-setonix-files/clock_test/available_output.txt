@@ -1,0 +1,7 @@
+posix timers available
+Monotonic clock available
+reso:          0.000000001
+CPU time clock available
+reso:          0.000000001
+thread cpu time avaiailable
+reso:          0.000000001
