@@ -25,13 +25,6 @@ int main(int argc, char *argv[])
 	float bary_numer; // technically should have x and y for barycentre
 	// but project requirements do not give that equation
 	float bary_denom;
-	struct fish{
-		float x;
-		float y;
-		float w;
-		float euc_dist;
-		float delta_f;
-	};
 	srand(time(NULL));
      	
 	// generate fish
