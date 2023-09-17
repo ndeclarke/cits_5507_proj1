@@ -18,7 +18,11 @@
 #define START_W 10.0 // starting weight of fish
 #define MAX_WEIGHT 20.0 // should be 2 x START_W
 #define MOVE_SPEED 0.1
-#define SCHED static
+#ifndef SCHED
+	#define SCHED static
+#endif
+#define STR(s) #s // used to convert SCHED into a string
+#define XSTR(s) STR(s)
 
 int main(int argc, char *argv[])
 {
@@ -38,12 +42,17 @@ int main(int argc, char *argv[])
 	// generate fish
 	struct fish *fishes;
 	fishes = (struct fish*)malloc(SCHOOL*sizeof(struct fish));
-	#pragma omp parallel for 
+	#pragma omp parallel
+	{
+	// rand() is not thread safe!
+	unsigned int thread_rstate = (unsigned int)omp_get_thread_num();
+	#pragma omp for schedule(SCHED)
 	for(int i = 0; i<SCHOOL; i = i +1){
-		(fishes + i) -> x = 100*(float)rand()/(float)(RAND_MAX) - 50; // randomly in the centre 100x100 square
-		(fishes + i) -> y = 100*(float)rand()/(float)(RAND_MAX) - 50;
+		(fishes + i) -> x = 100*(float)rand_r(&thread_rstate)/(float)(RAND_MAX) - 50; // randomly in the centre 100x100 square
+		(fishes + i) -> y = 100*(float)rand_r(&thread_rstate)/(float)(RAND_MAX) - 50;
 		(fishes + i) -> w = START_W;
 		(fishes + i) -> euc_dist = sqrt(pow((fishes + i) -> x,2) + pow((fishes + i) -> y,2));
+	}
 	}
 
 	// start the clock
@@ -57,7 +66,7 @@ int main(int argc, char *argv[])
 		{
 		// rand() is not thread safe!
 		unsigned int thread_rstate = (unsigned int)omp_get_thread_num();
-		#pragma omp for
+		#pragma omp for schedule(SCHED)
 		for(int i = 0; i<SCHOOL; i++){
 			// move random values in interval [-MOVE_SPEED, MOVE_SPEED]
 			(fishes + i) -> x = (fishes + i) -> x + (2*(float)rand_r(&thread_rstate)/(float)(RAND_MAX) - 1)*MOVE_SPEED;
@@ -83,7 +92,7 @@ int main(int argc, char *argv[])
 			
 		// find maximum change to objective function
 		max_delta = -0.2; // minimum possible is -0.1*sqrt(2)
-		#pragma omp parallel for reduction(max: max_delta)
+		#pragma omp parallel for schedule(SCHED) reduction(max: max_delta)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			if((fishes + i) -> delta_f > max_delta){
 				max_delta = (fishes + i) -> delta_f;
@@ -91,7 +100,7 @@ int main(int argc, char *argv[])
 		}
 
 		//change weights
-		#pragma omp parallel for
+		#pragma omp parallel for schedule(SCHED)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			(fishes + i) -> w = (fishes + i) -> w + (fishes + i) -> delta_f/max_delta;
 			if((fishes + i) -> w > MAX_WEIGHT){
@@ -105,7 +114,7 @@ int main(int argc, char *argv[])
 		// calculate barycentre
 		bary_numer = 0;
 		bary_denom = 0;
-		#pragma omp parallel for reduction(+: bary_numer, bary_denom)
+		#pragma omp parallel for schedule(SCHED) reduction(+: bary_numer, bary_denom)
 		for(int i = 0; i<SCHOOL; i = i +1){
 			bary_numer = bary_numer + (fishes + i) -> euc_dist * (fishes + i) -> w;
 			bary_denom = bary_denom + (fishes + i) -> euc_dist;
@@ -115,5 +124,5 @@ int main(int argc, char *argv[])
 
 	// stop the clock
 	end_timer(&time_results);
-	printf("%d,%d,%d,%f,%f,%f,%f\n", OMP_NUM_THREADS, SCHOOL, STEPS, time_results.cpu_cycles_elapsed, time_results.omp_elapsed, time_results.monotonic_elapsed, time_results.posix_cputime_elapsed);
+	printf("parallel,%d,%d,%d,%f,%f,%f,%f,%s\n", OMP_NUM_THREADS, SCHOOL, STEPS, time_results.cpu_cycles_elapsed, time_results.omp_elapsed, time_results.monotonic_elapsed, time_results.posix_cputime_elapsed,XSTR(SCHED));
 }
