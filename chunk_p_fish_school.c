@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
 		double delta_f;
 	};
 	srand(time(NULL));
-    printf("size of struct = %u\n", sizeof(struct fish));
 	// generate fish
 	struct fish *fishes;
 	fishes = (struct fish*)malloc(SCHOOL*sizeof(struct fish));
