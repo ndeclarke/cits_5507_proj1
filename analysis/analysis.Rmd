@@ -1,0 +1,47 @@
+---
+title: "High Performance Project 1 Analysis"
+output: html_notebook
+---
+
+```{r}
+chunk1M16c.out <- read.csv("../exp_data/chunk1M16c.out", header = FALSE)
+chunk1M16cDyn.out <- read.csv("../exp_data/chunk1M16cDyn.out", header = FALSE)
+chunk1M4cstatic.out <- read.csv("../exp_data/chunk1M4cstatic.out", header = FALSE)
+chunk1M4cstaticb.out <- read.csv("../exp_data/chunk1M4cstaticb.out", header = FALSE)
+para1M16cstaticdynamic.out <- read.csv("../exp_data/para1M16cstaticdynamic.out", header = FALSE)
+para1m12c.out <- read.csv("../exp_data/para1m12c.out", header = FALSE)
+para1m16c.out <- read.csv("../exp_data/para1m16c.out", header = FALSE)
+para1m16cb.out <- read.csv("../exp_data/para1m16cb.out", header = FALSE)
+para1m16cdyn.out <- read.csv("../exp_data/para1m16cdyn.out", header = FALSE)
+para1m2c.out <- read.csv("../exp_data/para1m2c.out", header = FALSE)
+para1m2cb.out <- read.csv("../exp_data/para1m2cb.out", header = FALSE)
+para1m4c.out <- read.csv("../exp_data/para1m4c.out", header = FALSE)
+para1m8c.out <- read.csv("../exp_data/para1m8c.out", header = FALSE)
+seq1m.out <- read.csv("../exp_data/seq1m.out", header = FALSE)
+testseq.out <- read.csv("../exp_data/testseq.out", header = FALSE)
+```
+
+```{r}
+seq1m.out <- cbind(seq1m.out, V9 = NA)
+para <- rbind(para1m2c.out, para1m2cb.out, para1m4c.out, seq1m.out, para1m8c.out, para1m16c.out, para1m16cb.out, para1m12c.out)
+para <- para[complete.cases(para$V4), ]
+para$V2 <- factor(para$V2)
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = para) + geom_boxplot(aes(x = V6, y = V2, group = V2)) + coord_flip() + xlab("Elapsed time") + ylab("Number of Threads")
+```
+
+```{r}
+library(dplyr)
+unfactor <- function(v) {
+  as.numeric(as.character(v))
+}
+medians <- group_by(para, V2) %>% summarise(across(c(V5, V6), median))
+threads <- unfactor(medians$V2)
+ggplot() + geom_line(aes(x = threads, y = medians$V6), color = "blue") + geom_point(aes(x = threads, y = medians$V6), color = "blue")
+ggplot() + geom_line(aes(x = threads, y = medians$V5/(threads*medians$V6))) + geom_line(aes(x = threads, y = 1), color = "red")
+```
+
+
