@@ -4,18 +4,19 @@
 #SBATCH --partition=debug
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=00:01:00
+#SBATCH --time=00:10:00
 
 #export OMP_PLACES=cores 
 #export OMP_PROC_BIND=close
 
-#SBATCH --cpus-per-task=2
-SCHOOL=1000
+#SBATCH --cpus-per-task=16
+SCHOOL=1000000
 STEPS=1000
 OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK 
 
 module load gcc
-cc -fopenmp p_fish_school.c timer.c -DSCHOOL=$SCHOOL -DSTEPS=$STEPS -DOMP_NUM_THREADS=$OMP_NUM_THREADS -o p_fish_school -lm 
-for i in {1..3}; do
+cc -fopenmp p_fish_school.c timer.c -DSCHOOL=$SCHOOL -DSTEPS=$STEPS -DOMP_NUM_THREADS=$OMP_NUM_THREADS -DSCHED=dynamic -o p_fish_school -lm 
+for i in {1..10}; do
 	srun -N 1 -c $OMP_NUM_THREADS ./p_fish_school
 done
+
