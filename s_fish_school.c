@@ -100,5 +100,5 @@ int main(int argc, char *argv[])
 
 	// stop the clock
 	end_timer(&time_results);
-	printf("sequential,%d,%d,%f,%f,%f,%f\n", SCHOOL, STEPS, time_results.cpu_cycles_elapsed, time_results.omp_elapsed, time_results.monotonic_elapsed, time_results.posix_cputime_elapsed);
+	printf("sequential,1,%d,%d,%f,%f,%f,%f\n", SCHOOL, STEPS, time_results.cpu_cycles_elapsed, time_results.omp_elapsed, time_results.monotonic_elapsed, time_results.posix_cputime_elapsed);
 }
