@@ -1,0 +1,153 @@
+---
+title: "Scheduling and ordering analysis"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+library(dplyr)
+# Read the files
+ch20M32D1 <- read.csv("chunk20M32cD1.out", header = FALSE)
+ch20M32D2 <- read.csv("chunk20M32cD2.out", header = FALSE)
+ch20M32G1 <- read.csv("chunk20M32cG1.out", header = FALSE)
+ch20M32S1 <- read.csv("chunk20M32cS1.out", header = FALSE)
+ch20M32S2 <- read.csv("chunk20M32cS2.out", header = FALSE)
+ch20M32SD <- read.csv("chunk20M32cSdefault.out", header = FALSE)
+ch20M32G2 <- read.csv("chunk20M32cG2.out", header = FALSE)
+ch20M500k1 <- read.csv("chunk20M32c500k1.out", header = FALSE)
+ch20M500k2 <- read.csv("chunk20M32c500k2.out", header = FALSE)
+ch20M625 <- read.csv("chunk20M32c625.out", header = FALSE)
+ch20M625B <- read.csv("chunk20M32c625B.out", header = FALSE)
+ch20M78125 <- read.csv("chunk20M32c78125.out", header = FALSE)
+ch20M78125B <- read.csv("chunk20M32c78125B.out", header = FALSE)
+
+# Combine all the datasets
+ch20chunked <- rbind(ch20M32S1, ch20M32S2, ch20M32D1, ch20M32D2, ch20M32G1, ch20M32G2,
+                     ch20M500k1, ch20M500k2, ch20M625, ch20M625B, ch20M78125, ch20M78125B)
+ch20chunked <- ch20chunked[sort.list(ch20chunked$V10),]
+# calculate  "waste factor"
+ch20chunked$waste <- ceiling(20000000 / 32 / ch20chunked$V10)/(20000000 / 32 / ch20chunked$V10) - 1
+#calculate chunks per thread
+ch20chunked$cpt <- 20000000/32/ch20chunked$V10
+
+numeric.chunksAll <- unique(ch20chunked[sort.list(ch20chunked$V10),]$V10)
+
+ch20Mdat <- rbind(cbind(ch20M32SD,V10="def=625k", waste=0, cpt=1), ch20chunked)
+ch20Mdat$Chunk_Size <- factor(ch20Mdat$V10, levels = c(numeric.chunksAll, "def=625k"))
+ch20Mdat$Type <- ch20Mdat$V9
+```
+
+We performed extensive testing of different chunk sizes and scheduling types. We thought it important to test how memory caches interacted with parallelisation process. For this reason we chose to make the process as memory intensive as we could. We did this by first converting floats to doubles in the code, increasing the size of fish struc from 20 to 40 bytes, and then running the process for a very large number of fish.
+
+We used a 32-core process with 20 million fish swimming for 1,000 steps each execution. Chunk sizes examined were:
+
+- Unspecified chunk size, which should by default be an even split into 32 chunks of 650k
+- Explicitly declared chunk size of 650k, to check this was identical
+- Three chunk sizes inspired by the memory architecture:
+  + 1.6k iterations per chunk $\approx$ 64KB, the L1 cache size
+  + 12.8k iterations $\approx$ 512KB, the L2 cache size
+  + 100k iterations $\approx$ 4MB, 1/8 of the L3 cache which is shared between 8 cores
+- Three further chunk sizes which split the 20 million fish completely evenly between threads:
+  + 156,250 iterations = 1/4 of 625k
+  + 78,125 iterations = 1/8 of 625k
+  + 625 iterations = 1/1000 of 625k
+- The deliberately inefficient chunk size of 500k
+
+We tried all chunk sizes using static, dynamic, and guided scheduling, executing 10 times each.
+
+We also attempted runtime scheduling, which we were forced to perform with only 1 million fish because it had such bad performance.
+
+## Memory cache sizes
+
+Our initial testing focused on static scheduling using chunk sizes based on the CPU memory caches. This showed that the 100k chunk size was a notable outlier when compared to the 1.6k and 12.8k and default chunk sizes, as shown in the graph below.
+
+```{r}
+ch20MS <- rbind(ch20M32S1, ch20M32S2)
+ch20MS <- ch20MS[sort.list(ch20MS$V10),]
+numeric.chunks <- unique(ch20M32S1[sort.list(ch20M32S1$V10),]$V10)
+ch20MS <- rbind(cbind(ch20M32SD,V10="default=625k"), ch20MS)
+ch20MS$Chunk_Size <- factor(ch20MS$V10, levels = c(numeric.chunks, "default=625k"))
+ggplot(ch20MS) + geom_point(aes(x = Chunk_Size, y = V6)) + xlab("Chunk size (iterations)") + ylab("Elapsed time (secs)") + ggtitle("Initial static scheduling")
+```
+
+This led us to explore potential reasons for this performance. It seemed most likely that this was due to the inefficiency of splitting 20 million iterations into 200 100k chunks and then allocating those 200 tasks to 32 threads. This meant that 24 of those threads would each do 600k iterations, while 8 threads would do an additional 100k iterations while the other threads waited.
+
+To attempt to model this, we created a waste factor which calculates the hypothetical extra capacity wasted by these waiting threads, assuming that all threads worked at the same speed.
+
+$$Waste = \frac{ceiling(\frac{Total\ Iterations}{Num\ Cores \times Chunk\ Size})}{\frac{Total\ Iterations}{Num\ Cores \times Chunk\ Size}}-1$$
+
+```{r}
+sched.table1 <- data.frame(chunk_size = c(numeric.chunks, "default=625k"))
+medians <- group_by(ch20MS, V10) %>% summarise(across(V6, median))
+sched.table1$MedianTime <- medians$V6
+sched.table1$Median_Comparison <- medians$V6 / tail(medians$V6, 1)
+# means <- group_by(ch20MS, V10) %>% summarise(across(V6, mean))
+# sched.table1$MeanTime <- means$V6
+# sched.table1$MeanComparison <- means$V6 / tail(means$V6, 1)
+sched.table1$Waste <- c((ceiling(20000000 / 32 / numeric.chunks)/(20000000 / 32 / numeric.chunks) - 1),0)
+sched.table1$ChunksPerThread <- c(20000000/32/numeric.chunks, 1)
+sched.table1
+```
+
+In reality, the 8 threads performing the extra work will have been the first to complete their first 600k iterations, and thus the drop in speed would be expected to be lower than this waste factor. In later runs of the program the 500k chunk size was specifically chosen to maximise this wastage, as this chunk size divides the work into 40 chunks to be allocated among the 32 threads.
+
+```{r}
+ggplot(subset(ch20Mdat, Type=="static")) + geom_jitter(aes(x = waste, y = V6, color = Chunk_Size), width = 0.005, height=0) + xlab("Waste") + ylab("Elapsed time") + ggtitle("All static scheduling observations")
+```
+
+There also seemed to be some inefficiency from smaller chunk sizes, presumably due to greater overhead in allocating chunks to threads. The graph of all experiments shows a general trend to shorter execution times as chunk size increases.
+
+```{r}
+# sched.table2 <- data.frame(chunk_size = c(numeric.chunks2, "default=625k"))
+medians2 <- group_by(ch20Mdat, V10) %>% summarise(across(V6, median))
+# sched.table2$MedianTime <- medians2$V6
+# sched.table2$Median_Comparison <- medians2$V6 / tail(medians2$V6, 1)
+# means2 <- group_by(ch20Mdat, V10) %>% summarise(across(V6, mean))
+# sched.table2$MeanTime <- means2$V6
+# sched.table2$MeanComparison <- means2$V6 / tail(means2$V6, 1)
+# sched.table2$Waste <- c((ceiling(20000000 / 32 / numeric.chunks2)/(20000000 / 32 / numeric.chunks2) - 1),0)
+# sched.table2$ChunksPerThread <- c(20000000/32/numeric.chunks2, 1)
+# sched.table2
+
+# including 500k chunk size
+ggplot(ch20Mdat) + geom_jitter(aes(x = Chunk_Size, y = V6/ tail(medians2$V6, 1), color = Type), width = 0.1, height =0) + xlab("Chunk size (iterations)") + ylab("Elapsed time / median default")
+
+# Excluding 500k chunk size
+ggplot(subset(ch20Mdat, waste<0.5)) + geom_jitter(aes(x = Chunk_Size, y = V6/ tail(medians2$V6, 1), color = Type), width = 0.1, height =0) + xlab("Chunk size (iterations)") + ylab("Elapsed time / median default")
+```
+
+An interesting result seen in the data is that guided scheduling performs better at lower chunk sizes. This is understandable, as guided scheduling will begin with larger chunk sizes and decrease the size of chunks towards the target chunk size as the loop proceeds. Thus the guided schedule will have a lower average chunks per thread than a static schedule with that specified chunk size.
+
+Dynamic scheduling did not show any value for our purpose. The work in this algorithm was very evenly spread across the iterations, thus it was to be expected that static scheduling would outperform the other types of scheduling. There been more variable calculation time for different iterations, then dynamic may have helped to even out the work between threads.
+
+
+## Runtime
+
+Runtime scheduling was also used, but it performed roughly 30 times slower than static scheduling using the same number of cores.  We thus used a 1 million fish version of the program and compared it to a static scheduled version using the same number of fish.
+
+```{r}
+runtimeDat <- read.csv("chunk20M32cRuntime.out", header = FALSE)
+# ggplot(runtimeDat) + geom_boxplot(aes(x=V9, y=V6)) # so different that a graph is not useful
+mediansRT <- group_by(runtimeDat, V9) %>% summarise(across(V6, median))
+mediansRT
+```
+
+
+## Ordered
+
+To measure the impact of making parallel for loops ordered, we created two new versions of the code. In one all parallel for loops contained an ordered clause, and in the other only the weight calculation had an ordered clause. These were then compared to the performance of parallelised code without any ordered clauses.
+
+```{r}
+orderedAll <- read.csv("ordered1m32c.out", header = FALSE)
+orderedWeight <- read.csv("orderedW1m32c.out", header = FALSE)
+
+orderedDat <- rbind(orderedAll, orderedWeight)
+orderedDat <- orderedDat[!is.na(orderedDat$V6),]
+
+mediansOrdered <- group_by(orderedDat, V1) %>% summarise(across(V6, median))
+mediansOrdered
+```
+
+
+
+
