@@ -31,6 +31,7 @@ para$V2 <- factor(para$V2)
 ```{r}
 library(ggplot2)
 ggplot(data = para) + geom_boxplot(aes(x = V6, y = V2, group = V2)) + coord_flip() + xlab("Elapsed time") + ylab("Number of Threads")
+ggplot(data = para) + geom_boxplot(aes(x = V5, y = V2, group = V2)) + coord_flip() + xlab("CPU cycles") + ylab("Number of Threads")
 ```
 
 ```{r}
@@ -41,7 +42,43 @@ unfactor <- function(v) {
 medians <- group_by(para, V2) %>% summarise(across(c(V5, V6), median))
 threads <- unfactor(medians$V2)
 ggplot() + geom_line(aes(x = threads, y = medians$V6), color = "blue") + geom_point(aes(x = threads, y = medians$V6), color = "blue")
-ggplot() + geom_line(aes(x = threads, y = medians$V5/(threads*medians$V6))) + geom_line(aes(x = threads, y = 1), color = "red")
+ggplot() + geom_line(aes(x = threads, y = medians$V5/(threads*medians$V6)), color = "blue") + geom_line(aes(x = threads, y = 1), color = "red")
 ```
 
+```{r}
+sort_atomic_crit <- read.csv("../sort_and_atomic_critical_analysis/results-19-09-23/combined.csv",  header = FALSE)
+sort_atomic_crit <- sort_atomic_crit[complete.cases(sort_atomic_crit$V5),]
+```
+
+```{r}
+seq_normal <- subset(sort_atomic_crit, V2 == 1 & V10 == "NORMAL")
+seq_normal_median <- group_by(seq_normal, V1) %>% summarise(across(c(V5, V6), median))
+seq_sort <- subset(sort_atomic_crit, V2 == 1 & V10 == "SORT")
+seq_sort_median <- group_by(seq_sort, V1) %>% summarise(across(c(V5, V6), median))
+```
+
+```{r}
+threads_analysis <- read.csv("../exp_data/new_thread_exps/combined.csv", header = FALSE)
+threads_analysis
+```
+
+```{r}
+format_as_latex_table <- function(df) {
+  str <- paste(paste(names(df), collapse = " & "), "\n\\hline\\hline\n", collapse = "")
+  for (i in 1:nrow(df)) {
+    str <- paste(str, paste(df[i,], collapse = " & "), "\n\\hline\n", collapse = "")
+  }
+  cat(str)
+}
+```
+
+```{r}
+time.means <- colMeans(threads_analysis[,5:8]) 
+time.sds <- apply(threads_analysis[,5:8], 2, sd)
+time.combined <- data.frame(Method = c("clock", "omp_get_wtime", "POSIX clock montonic", "POSIX Process CPU time"), Mean = time.means, SD = time.sds)
+format_as_latex_table(time.combined)
+```
+```{r}
+ggplot(threads_analysis) + geom_jitter(aes(x = V2, y = V5, color = "cpu cycles")) + geom_jitter(aes(x = V2, y = V6, color = "elapsed time"))
+```
 

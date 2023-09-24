@@ -7,19 +7,19 @@ output: html_notebook
 library(ggplot2)
 library(dplyr)
 # Read the files
-ch20M32D1 <- read.csv("chunk20M32cD1.out", header = FALSE)
-ch20M32D2 <- read.csv("chunk20M32cD2.out", header = FALSE)
-ch20M32G1 <- read.csv("chunk20M32cG1.out", header = FALSE)
-ch20M32S1 <- read.csv("chunk20M32cS1.out", header = FALSE)
-ch20M32S2 <- read.csv("chunk20M32cS2.out", header = FALSE)
-ch20M32SD <- read.csv("chunk20M32cSdefault.out", header = FALSE)
-ch20M32G2 <- read.csv("chunk20M32cG2.out", header = FALSE)
-ch20M500k1 <- read.csv("chunk20M32c500k1.out", header = FALSE)
-ch20M500k2 <- read.csv("chunk20M32c500k2.out", header = FALSE)
-ch20M625 <- read.csv("chunk20M32c625.out", header = FALSE)
-ch20M625B <- read.csv("chunk20M32c625B.out", header = FALSE)
-ch20M78125 <- read.csv("chunk20M32c78125.out", header = FALSE)
-ch20M78125B <- read.csv("chunk20M32c78125B.out", header = FALSE)
+ch20M32D1 <- read.csv("../exp_data/chunk32exps/chunk20M32cD1.out", header = FALSE)
+ch20M32D2 <- read.csv("../exp_data/chunk32exps/chunk20M32cD2.out", header = FALSE)
+ch20M32G1 <- read.csv("../exp_data/chunk32exps/chunk20M32cG1.out", header = FALSE)
+ch20M32S1 <- read.csv("../exp_data/chunk32exps/chunk20M32cS1.out", header = FALSE)
+ch20M32S2 <- read.csv("../exp_data/chunk32exps/chunk20M32cS2.out", header = FALSE)
+ch20M32SD <- read.csv("../exp_data/chunk32exps/chunk20M32cSdefault.out", header = FALSE)
+ch20M32G2 <- read.csv("../exp_data/chunk32exps/chunk20M32cG2.out", header = FALSE)
+ch20M500k1 <- read.csv("../exp_data/chunk32exps/chunk20M32c500k1.out", header = FALSE)
+ch20M500k2 <- read.csv("../exp_data/chunk32exps/chunk20M32c500k2.out", header = FALSE)
+ch20M625 <- read.csv("../exp_data/chunk32exps/chunk20M32c625.out", header = FALSE)
+ch20M625B <- read.csv("../exp_data/chunk32exps/chunk20M32c625B.out", header = FALSE)
+ch20M78125 <- read.csv("../exp_data/chunk32exps/chunk20M32c78125.out", header = FALSE)
+ch20M78125B <- read.csv("../exp_data/chunk32exps/chunk20M32c78125B.out", header = FALSE)
 
 # Combine all the datasets
 ch20chunked <- rbind(ch20M32S1, ch20M32S2, ch20M32D1, ch20M32D2, ch20M32G1, ch20M32G2,
@@ -126,7 +126,7 @@ Dynamic scheduling did not show any value for our purpose. The work in this algo
 Runtime scheduling was also used, but it performed roughly 30 times slower than static scheduling using the same number of cores.  We thus used a 1 million fish version of the program and compared it to a static scheduled version using the same number of fish.
 
 ```{r}
-runtimeDat <- read.csv("chunk20M32cRuntime.out", header = FALSE)
+runtimeDat <- read.csv("../exp_data/chunk32exps/chunk20M32cRuntime.out", header = FALSE)
 # ggplot(runtimeDat) + geom_boxplot(aes(x=V9, y=V6)) # so different that a graph is not useful
 mediansRT <- group_by(runtimeDat, V9) %>% summarise(across(V6, median))
 mediansRT
@@ -138,8 +138,8 @@ mediansRT
 To measure the impact of making parallel for loops ordered, we created two new versions of the code. In one all parallel for loops contained an ordered clause, and in the other only the weight calculation had an ordered clause. These were then compared to the performance of parallelised code without any ordered clauses.
 
 ```{r}
-orderedAll <- read.csv("ordered1m32c.out", header = FALSE)
-orderedWeight <- read.csv("orderedW1m32c.out", header = FALSE)
+orderedAll <- read.csv("../exp_data/ordered1m32c.out", header = FALSE)
+orderedWeight <- read.csv("../exp_data/orderedW1m32c.out", header = FALSE)
 
 orderedDat <- rbind(orderedAll, orderedWeight)
 orderedDat <- orderedDat[!is.na(orderedDat$V6),]

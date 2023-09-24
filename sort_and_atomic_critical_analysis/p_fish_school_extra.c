@@ -180,4 +180,5 @@ int main(int argc, char *argv[])
 	// stop the clock
 	end_timer(&time_results);
 	printf("parallel,%d,%d,%d,%f,%f,%f,%f,%s,%s,%s\n", OMP_NUM_THREADS, SCHOOL, STEPS, time_results.cpu_cycles_elapsed, time_results.omp_elapsed, time_results.monotonic_elapsed, time_results.posix_cputime_elapsed,XSTR(SCHED), delta_f_scheme, bary_scheme);
+	printf("%f,%f\n", bary_numer, bary_denom);
 }
