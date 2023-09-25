@@ -48,13 +48,46 @@ ggplot() + geom_line(aes(x = threads, y = medians$V5/(threads*medians$V6)), colo
 ```{r}
 sort_atomic_crit <- read.csv("../sort_and_atomic_critical_analysis/results-19-09-23/combined.csv",  header = FALSE)
 sort_atomic_crit <- sort_atomic_crit[complete.cases(sort_atomic_crit$V5),]
+sort_atomic_crit$V2 <- as.integer(sort_atomic_crit$V2)
 ```
 
 ```{r}
-seq_normal <- subset(sort_atomic_crit, V2 == 1 & V10 == "NORMAL")
-seq_normal_median <- group_by(seq_normal, V1) %>% summarise(across(c(V5, V6), median))
-seq_sort <- subset(sort_atomic_crit, V2 == 1 & V10 == "SORT")
-seq_sort_median <- group_by(seq_sort, V1) %>% summarise(across(c(V5, V6), median))
+seq_i <- 1:nrow(sort_atomic_crit)
+ggplot(sort_atomic_crit) + geom_point(aes(x = seq_i, y = V5/(V2*V6)))
+```
+
+```{r}
+sort_atomic_crit$TYPE <- NA
+sort_atomic_crit$TYPE <- ifelse(sort_atomic_crit$V2 == 1 & sort_atomic_crit$V10 == "NORMAL", "Reduction", sort_atomic_crit$TYPE)
+sort_atomic_crit$TYPE <- ifelse(sort_atomic_crit$V2 == 1 & sort_atomic_crit$V10 == "SORT", "Sort", sort_atomic_crit$TYPE)
+sort_atomic_crit$TYPE <- ifelse(sort_atomic_crit$V11 == "REDUCTION" & sort_atomic_crit$V10 == "REDUCTION", "Reduction", sort_atomic_crit$TYPE)
+sort_atomic_crit$TYPE <- ifelse(sort_atomic_crit$V11 == "CRITICAL" & sort_atomic_crit$V10 == "CRITICAL", "Critical", sort_atomic_crit$TYPE)
+sort_atomic_crit$TYPE <- ifelse(sort_atomic_crit$V11 == "REDUCTION" & sort_atomic_crit$V10 == "SORT", "Sort", sort_atomic_crit$TYPE)
+sort_atomic_crit$TYPE <- ifelse(sort_atomic_crit$V11 == "ATOMIC" & sort_atomic_crit$V10 == "REDUCTION", "Atomic", sort_atomic_crit$TYPE)
+sort_atomic_crit
+```
+
+```{r}
+sac_sub <- subset(sort_atomic_crit, V2 < 50)
+src_elapsed_medians <- sac_sub %>% group_by(across(all_of(c("V2", "TYPE")))) %>% summarise(elapsed_med = median(V6), elapsed_CF = median(CF))
+ggplot() + geom_jitter(data = sac_sub, aes(x = V2, y = V6, color = TYPE)) + xlab("Number of Threads") + ylab("Elapsed Time") + geom_path(data = src_elapsed_medians, aes(x = V2, y = elapsed_med, color = TYPE))
+ggsave("sac_elapsed.png")
+```
+
+```{r}
+sort_atomic_crit$CF <- sort_atomic_crit$V5/(sort_atomic_crit$V6*sort_atomic_crit$V2)
+ggplot() + geom_jitter(data = sac_sub, aes(x = V2, y = CF, color = TYPE)) + xlab("Number of Threads") + geom_path(data = src_elapsed_medians, aes(x = V2, y = elapsed_CF, color = TYPE))
+ggsave("sac_cf.png")
+```
+
+```{r}
+seq_normal_med <- subset(src_elapsed_medians, TYPE == "Reduction" & V2 == 1)$elapsed_med
+seq_sort_med <- subset(src_elapsed_medians, TYPE == "Sort" & V2 == 1)$elapsed_med
+sac_sub$SEQ_MED <- ifelse(sac_sub$TYPE == "Sort", seq_sort_med, seq_normal_med)
+sac_sub$SUF <- sac_sub$SEQ_MED/sac_sub$V6
+SUF_trends <- sac_sub %>% group_by(across(all_of(c("V2", "TYPE")))) %>% summarise(SUF = median(SUF))
+ggplot() + geom_jitter(data = sac_sub, aes(x = V2, y = SUF, color = TYPE)) + geom_line(aes(x=c(0,32), y = c(0,32)), color = "red") + xlab("Number of Threads") + geom_path(data = SUF_trends, aes(x = V2, y = SUF, color = TYPE))
+ggsave("sac_suf.png")
 ```
 
 ```{r}
@@ -79,6 +112,62 @@ time.combined <- data.frame(Method = c("clock", "omp_get_wtime", "POSIX clock mo
 format_as_latex_table(time.combined)
 ```
 ```{r}
-ggplot(threads_analysis) + geom_jitter(aes(x = V2, y = V5, color = "cpu cycles")) + geom_jitter(aes(x = V2, y = V6, color = "elapsed time"))
+ggplot(threads_analysis) + geom_point(aes(x = V2, y = V5, color = "cpu cycles")) + geom_point(aes(x = V2, y = V6, color = "elapsed time")) + xlab("Number of Threads") + ylab("Seconds")
+ggsave("timing_compare.png")
+```
+
+
+```{r}
+threads_analysis$clock_factor <- threads_analysis$V5/(threads_analysis$V2 * threads_analysis$V6)
+ggplot(threads_analysis) + geom_point(aes(x = V2, y = V5/(V2*V6))) + xlab("Number of Threads") + ylab("CF")
+ggsave("threads_clock_ratio.png")
+```
+
+
+```{r}
+subset(threads_analysis, V2 == 64)
+```
+
+```{r}
+seq_median <- median(subset(threads_analysis, V2 == 1)$V6)
+ggplot() + geom_point(data = threads_analysis, aes(x = V2, y = seq_median/V6)) + geom_line(aes(x=c(0,64), y = c(0,64)), color = "red") + xlab("Number of Threads") + ylab("SUF")
+ggsave("threads_speed_up_plot.png")
+```
+
+
+
+
+
+
+
+# fishes
+
+```{r}
+fishes <- read.csv("../exp_data/fishes/combined.csv", header = FALSE)
+fishes$`Number of Threads` <- factor(fishes$V2)
+fishes$CF <- fishes$V5/(fishes$V2*fishes$V6)
+```
+
+```{r}
+ggplot() + geom_jitter(data = fishes, aes(x = V3, y = V6, color = `Number of Threads`)) + scale_x_log10() + xlab("Fishes") + ylab("Elapsed Time")
+ggsave("fishes_elapsed.png")
+```
+
+
+```{r}
+ggplot() + geom_jitter(data = fishes, aes(x = V3, y = CF, color = `Number of Threads`)) + scale_x_log10() + xlab("Fishes")
+ggsave("fishes_cf.png")
+```
+
+```{r}
+fishes_medians <- fishes %>% group_by(across(all_of(c("Number of Threads", "V3")))) %>% summarise(elapsed_medium = median(V6))
+fishes_med_sub <- subset(fishes_medians, V3 != 1000000)
+fishes_t1 <- subset(fishes_med_sub, `Number of Threads` == 1)
+fishes_t4 <- subset(fishes_med_sub, `Number of Threads` == 4)
+combined <- cbind(fishes_t1, fishes_t4)
+SUF <- combined$elapsed_medium...3/combined$elapsed_medium...6
+fishes_x <- fishes_t1$V3
+ggplot() + geom_jitter(aes(x = fishes_x, y = SUF)) + scale_x_log10() + xlab("Fishes") + geom_hline(yintercept = 4, color = "red")
+ggsave("fishes_suf.png")
 ```
 
